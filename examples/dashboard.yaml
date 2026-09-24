@@ -1,0 +1,9 @@
+# Replace this placeholder with the integration's diagnostic Status / État entity.
+title: Energy Assistant
+views:
+  - title: Energy Assistant
+    path: pac-energy
+    type: panel
+    cards:
+      - type: custom:pac-energy-card
+        entity: sensor.example_pac_energy_status

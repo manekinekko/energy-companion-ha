@@ -1,0 +1,10 @@
+{
+  "name": "energy-assistant-lab",
+  "private": true,
+  "version": "0.1.1",
+  "license": "MIT",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test model.test.cjs"
+  }
+}

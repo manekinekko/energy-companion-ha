@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="fr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Energy Assistant : environnement HA fictif de test</title>
+<script>
+  (() => {
+    const param = new URLSearchParams(window.location.search).get("scoutTheme");
+    const theme =
+      param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+</script>
+<body>
+<p style="padding:16px">ENVIRONNEMENT DE TEST LOCAL. Entités et statistiques HA entièrement fictives.</p>
+<pac-energy-card></pac-energy-card>
+<script type="module">
+import theme from '/pac_energy/theme.mjs';
+import '/pac_energy/pac-energy-card.js';
+import { HOUR } from '/pac_energy/data.mjs';
+const style = document.createElement('style');
+style.textContent = theme.replaceAll(':host([dark])', 'html[data-theme="dark"]').replaceAll(':host', ':root') +
+  'body{margin:0;background:var(--cp-bg);color:var(--cp-text);font:16px "Segoe UI",Aptos,Calibri,sans-serif}pac-energy-card{display:block;max-width:1280px;margin:auto}';
+document.head.append(style);
+const energy = { device_class: 'energy', state_class: 'total_increasing', unit_of_measurement: 'kWh' };
+window.requests = [];
+window.hass = {
+  themes: { darkMode: document.documentElement.dataset.theme === 'dark' },
+  config: { time_zone: 'Europe/Paris' },
+  states: {
+    'sensor.example_status': {
+      state: 'ready',
+      attributes: {
+        contract_version: 1, entry_id: 'example-installation', read_only: true,
+        sources: { electricity: 'sensor.example_electricity', thermal: 'sensor.example_thermal', backup: 'sensor.example_backup' },
+        tariff_eur_kwh: 0.25, same_scope: true, input_errors: {},
+        curve: { profile: 'unknown', minimum: null, maximum: null },
+      },
+    },
+    'sensor.example_electricity': { state: '12345', attributes: energy },
+    'sensor.example_thermal': { state: '34567', attributes: energy },
+    'sensor.example_backup': { state: '234', attributes: energy },
+  },
+  callService() { throw new Error('Forbidden physical service call'); },
+  async callWS(message) {
+    window.requests.push(message);
+    if (window.rejectStatistics) throw new Error('Recorder non disponible (test)');
+    if (message.type === 'recorder/get_statistics_metadata')
+      return message.statistic_ids.map(id => ({ statistic_id: id, has_sum: true, unit_of_measurement: 'kWh' }));
+    if (message.type !== 'recorder/statistics_during_period') throw new Error('Unexpected WebSocket message');
+    const start = Date.parse(message.start_time), end = Date.parse(message.end_time);
+    return Object.fromEntries(message.statistic_ids.map(id => [
+      id, Array.from({ length: (end - start) / HOUR }, (_, i) => ({
+        start: start + i * HOUR, end: start + (i + 1) * HOUR,
+        sum: 1000 + i * (id.includes('thermal') ? 3 : id.includes('backup') ? 0.1 : 1),
+      })).filter((_, i) => !window.statisticsGap || i !== Math.floor((end - start) / HOUR) - 10),
+    ]));
+  },
+};
+window.card = document.querySelector('pac-energy-card');
+card.setConfig({ entity: 'sensor.example_status' });
+card.hass = hass;
+</script>
+</body>
+</html>

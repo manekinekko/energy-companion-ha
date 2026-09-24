@@ -1,0 +1,15 @@
+.venv/
+.bootstrap/
+.python/
+.uv-cache/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+node_modules/
+screenshots/
+*.pyc
+.coverage
+htmlcov/
+.pip-install.log
+.ha-test.log
+.ha-single.log

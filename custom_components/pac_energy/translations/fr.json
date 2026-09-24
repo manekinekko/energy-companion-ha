@@ -1,0 +1,142 @@
+{
+  "title": "Energy Assistant",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Energy Assistant",
+        "description": "Lecture seule. Choisir des compteurs cumulatifs existants. Aucune commande ne sera envoyée. Unités énergie : Wh, kWh, MWh. Les bornes et le profil inconnus ne sont jamais déduits.",
+        "data": {
+          "name": "Nom de l'installation",
+          "electricity": "Énergie électrique totale (appoint inclus)",
+          "thermal": "Chaleur produite",
+          "heating": "Électricité chauffage (détail)",
+          "dhw": "Électricité eau chaude (détail)",
+          "backup": "Électricité appoint (détail)",
+          "outside": "Température extérieure",
+          "room": "Température de pièce",
+          "climate": "Entité climat (lecture seule)",
+          "presence": "Entité de présence (lecture seule)",
+          "same_scope": "Je confirme que chaleur et électricité couvrent les mêmes équipements, appoint inclus",
+          "tariff": "Tarif constant estimatif (EUR/kWh, facultatif)",
+          "profile": "Profil explicite du tracé",
+          "minimum": "Borne de départ minimale configurée (°C)",
+          "maximum": "Borne de départ maximale configurée (°C)"
+        }
+      },
+      "reconfigure": {
+        "title": "Energy Assistant",
+        "description": "Lecture seule. Choisir des compteurs cumulatifs existants. Aucune commande ne sera envoyée. Unités énergie : Wh, kWh, MWh. Les bornes et le profil inconnus ne sont jamais déduits.",
+        "data": {
+          "name": "Nom de l'installation",
+          "electricity": "Énergie électrique totale (appoint inclus)",
+          "thermal": "Chaleur produite",
+          "heating": "Électricité chauffage (détail)",
+          "dhw": "Électricité eau chaude (détail)",
+          "backup": "Électricité appoint (détail)",
+          "outside": "Température extérieure",
+          "room": "Température de pièce",
+          "climate": "Entité climat (lecture seule)",
+          "presence": "Entité de présence (lecture seule)",
+          "same_scope": "Je confirme que chaleur et électricité couvrent les mêmes équipements, appoint inclus",
+          "tariff": "Tarif constant estimatif (EUR/kWh, facultatif)",
+          "profile": "Profil explicite du tracé",
+          "minimum": "Borne de départ minimale configurée (°C)",
+          "maximum": "Borne de départ maximale configurée (°C)"
+        }
+      }
+    },
+    "error": {
+      "invalid_config": "Valeur de configuration invalide.",
+      "missing": "Entité introuvable.",
+      "invalid_value": "Valeur numérique finie attendue, énergie positive ou nulle.",
+      "invalid_domain": "Domaine d'entité non pris en charge.",
+      "invalid_device_class": "Classe de mesure incorrecte.",
+      "invalid_state_class": "L'énergie doit avoir la classe total ou total_increasing.",
+      "invalid_unit": "Utiliser Wh/kWh/MWh ou °C/°F/K.",
+      "duplicate_source": "Choisir une source différente pour chaque rôle.",
+      "bounds_pair": "Saisir les deux bornes ou aucune.",
+      "invalid_bounds": "La borne minimale dépasse la maximale."
+    },
+    "abort": {
+      "reconfigure_successful": "Configuration mise à jour."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Energy Assistant",
+        "description": "Lecture seule. Choisir des compteurs cumulatifs existants. Aucune commande ne sera envoyée. Unités énergie : Wh, kWh, MWh. Les bornes et le profil inconnus ne sont jamais déduits.",
+        "data": {
+          "name": "Nom de l'installation",
+          "electricity": "Énergie électrique totale (appoint inclus)",
+          "thermal": "Chaleur produite",
+          "heating": "Électricité chauffage (détail)",
+          "dhw": "Électricité eau chaude (détail)",
+          "backup": "Électricité appoint (détail)",
+          "outside": "Température extérieure",
+          "room": "Température de pièce",
+          "climate": "Entité climat (lecture seule)",
+          "presence": "Entité de présence (lecture seule)",
+          "same_scope": "Je confirme que chaleur et électricité couvrent les mêmes équipements, appoint inclus",
+          "tariff": "Tarif constant estimatif (EUR/kWh, facultatif)",
+          "profile": "Profil explicite du tracé",
+          "minimum": "Borne de départ minimale configurée (°C)",
+          "maximum": "Borne de départ maximale configurée (°C)"
+        }
+      }
+    },
+    "error": {
+      "invalid_config": "Valeur de configuration invalide.",
+      "missing": "Entité introuvable.",
+      "invalid_value": "Valeur numérique finie attendue, énergie positive ou nulle.",
+      "invalid_domain": "Domaine d'entité non pris en charge.",
+      "invalid_device_class": "Classe de mesure incorrecte.",
+      "invalid_state_class": "L'énergie doit avoir la classe total ou total_increasing.",
+      "invalid_unit": "Utiliser Wh/kWh/MWh ou °C/°F/K.",
+      "duplicate_source": "Choisir une source différente pour chaque rôle.",
+      "bounds_pair": "Saisir les deux bornes ou aucune.",
+      "invalid_bounds": "La borne minimale dépasse la maximale."
+    }
+  },
+  "selector": {
+    "profile": {
+      "options": {
+        "unknown": "Inconnu (indisponible)",
+        "standard": "Standard",
+        "legacy-pac-0": "PAC ancienne génération, circuit 0"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "État",
+        "state": {
+          "ready": "Prêt",
+          "source_error": "Vérifier les sources"
+        }
+      },
+      "electricity": {
+        "name": "Énergie électrique totale (appoint inclus)"
+      },
+      "thermal": {
+        "name": "Chaleur produite"
+      },
+      "heating": {
+        "name": "Électricité chauffage (détail)"
+      },
+      "dhw": {
+        "name": "Électricité eau chaude (détail)"
+      },
+      "backup": {
+        "name": "Électricité appoint (détail)"
+      },
+      "outside": {
+        "name": "Température extérieure"
+      },
+      "room": {
+        "name": "Température de pièce"
+      }
+    }
+  }
+}

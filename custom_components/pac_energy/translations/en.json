@@ -1,0 +1,142 @@
+{
+  "title": "Energy Assistant",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Energy Assistant",
+        "description": "Read-only. Select existing cumulative counters. No commands are sent. Energy units: Wh, kWh, MWh. Unknown bounds and profiles are never inferred.",
+        "data": {
+          "name": "Installation name",
+          "electricity": "Total electrical energy (including backup)",
+          "thermal": "Produced thermal energy",
+          "heating": "Heating electrical energy (detail)",
+          "dhw": "Hot water electrical energy (detail)",
+          "backup": "Backup electrical energy (detail)",
+          "outside": "Outdoor temperature",
+          "room": "Room temperature",
+          "climate": "Climate entity (read-only)",
+          "presence": "Presence entity (read-only)",
+          "same_scope": "I confirm thermal and electrical counters cover the same equipment, including backup",
+          "tariff": "Constant tariff estimate (EUR/kWh, optional)",
+          "profile": "Explicit chart profile",
+          "minimum": "Configured minimum supply temperature (°C)",
+          "maximum": "Configured maximum supply temperature (°C)"
+        }
+      },
+      "reconfigure": {
+        "title": "Energy Assistant",
+        "description": "Read-only. Select existing cumulative counters. No commands are sent. Energy units: Wh, kWh, MWh. Unknown bounds and profiles are never inferred.",
+        "data": {
+          "name": "Installation name",
+          "electricity": "Total electrical energy (including backup)",
+          "thermal": "Produced thermal energy",
+          "heating": "Heating electrical energy (detail)",
+          "dhw": "Hot water electrical energy (detail)",
+          "backup": "Backup electrical energy (detail)",
+          "outside": "Outdoor temperature",
+          "room": "Room temperature",
+          "climate": "Climate entity (read-only)",
+          "presence": "Presence entity (read-only)",
+          "same_scope": "I confirm thermal and electrical counters cover the same equipment, including backup",
+          "tariff": "Constant tariff estimate (EUR/kWh, optional)",
+          "profile": "Explicit chart profile",
+          "minimum": "Configured minimum supply temperature (°C)",
+          "maximum": "Configured maximum supply temperature (°C)"
+        }
+      }
+    },
+    "error": {
+      "invalid_config": "Invalid configuration value.",
+      "missing": "Entity not found.",
+      "invalid_value": "Expected a finite non-negative energy value.",
+      "invalid_domain": "Unsupported entity domain.",
+      "invalid_device_class": "Wrong device class.",
+      "invalid_state_class": "Energy needs total or total_increasing state class.",
+      "invalid_unit": "Use Wh/kWh/MWh or °C/°F/K.",
+      "duplicate_source": "Select a different source for each role.",
+      "bounds_pair": "Provide both bounds or neither.",
+      "invalid_bounds": "Minimum must not exceed maximum."
+    },
+    "abort": {
+      "reconfigure_successful": "Configuration updated."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Energy Assistant",
+        "description": "Read-only. Select existing cumulative counters. No commands are sent. Energy units: Wh, kWh, MWh. Unknown bounds and profiles are never inferred.",
+        "data": {
+          "name": "Installation name",
+          "electricity": "Total electrical energy (including backup)",
+          "thermal": "Produced thermal energy",
+          "heating": "Heating electrical energy (detail)",
+          "dhw": "Hot water electrical energy (detail)",
+          "backup": "Backup electrical energy (detail)",
+          "outside": "Outdoor temperature",
+          "room": "Room temperature",
+          "climate": "Climate entity (read-only)",
+          "presence": "Presence entity (read-only)",
+          "same_scope": "I confirm thermal and electrical counters cover the same equipment, including backup",
+          "tariff": "Constant tariff estimate (EUR/kWh, optional)",
+          "profile": "Explicit chart profile",
+          "minimum": "Configured minimum supply temperature (°C)",
+          "maximum": "Configured maximum supply temperature (°C)"
+        }
+      }
+    },
+    "error": {
+      "invalid_config": "Invalid configuration value.",
+      "missing": "Entity not found.",
+      "invalid_value": "Expected a finite non-negative energy value.",
+      "invalid_domain": "Unsupported entity domain.",
+      "invalid_device_class": "Wrong device class.",
+      "invalid_state_class": "Energy needs total or total_increasing state class.",
+      "invalid_unit": "Use Wh/kWh/MWh or °C/°F/K.",
+      "duplicate_source": "Select a different source for each role.",
+      "bounds_pair": "Provide both bounds or neither.",
+      "invalid_bounds": "Minimum must not exceed maximum."
+    }
+  },
+  "selector": {
+    "profile": {
+      "options": {
+        "unknown": "Unknown (unavailable)",
+        "standard": "Standard",
+        "legacy-pac-0": "Legacy heat pump, circuit 0"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "ready": "Ready",
+          "source_error": "Check sources"
+        }
+      },
+      "electricity": {
+        "name": "Total electrical energy (including backup)"
+      },
+      "thermal": {
+        "name": "Produced thermal energy"
+      },
+      "heating": {
+        "name": "Heating electrical energy (detail)"
+      },
+      "dhw": {
+        "name": "Hot water electrical energy (detail)"
+      },
+      "backup": {
+        "name": "Backup electrical energy (detail)"
+      },
+      "outside": {
+        "name": "Outdoor temperature"
+      },
+      "room": {
+        "name": "Room temperature"
+      }
+    }
+  }
+}

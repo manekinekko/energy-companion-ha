@@ -1,0 +1,14 @@
+{
+  "name": "energy-assistant",
+  "private": true,
+  "version": "0.1.1",
+  "license": "MIT",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test demo/model.test.cjs tests/*.test.mjs",
+    "test:browser": "node --test tests/card.browser.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.58.2"
+  }
+}
