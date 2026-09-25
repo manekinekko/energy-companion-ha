@@ -224,7 +224,7 @@ class RuntimeTests(unittest.IsolatedAsyncioTestCase):
         manifest = json.loads(
             (Path(__file__).parents[1] / "custom_components/pac_energy/manifest.json").read_text()
         )
-        self.assertEqual(manifest["version"], "0.1.1")
+        self.assertEqual(manifest["version"], "0.1.2")
         self.assertEqual(manifest["name"], "Energy Assistant")
         async with ClientSession() as client:
             for path in ("pac-energy-card.js", "data.mjs", "theme.mjs", "demo/index.html"):

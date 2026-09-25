@@ -25,7 +25,7 @@ Energy Assistant's numerical sensors normalize counters to kWh and temperatures 
 
 The card uses `hass.callWS` with the existing HA session:
 
-1. `recorder/get_statistics_metadata` for selected sources accessible in `hass.states`, checking `has_sum` and Wh/kWh/MWh units.
+1. `recorder/get_statistics_metadata` for selected sources accessible in `hass.states`, checking `has_sum` and Wh/kWh/MWh statistics units. Current responses use `statistics_unit_of_measurement`; the older `unit_of_measurement` field is accepted only when the current field is absent. Display units do not override statistics units.
 2. `recorder/statistics_during_period`, with `period: hour`, `types: [sum]`, and `units: {energy: kWh}`.
 
 There are no custom HTTP requests, stored tokens, or vendor APIs. Official Recorder operations run in Recorder's executor, not the integration's event loop. The card does not expand HA permissions.

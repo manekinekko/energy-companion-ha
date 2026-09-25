@@ -1,6 +1,6 @@
 import './model.js';
 import theme from './theme.mjs';
-import { ENERGY_KEYS, energyValue, periodWindow, fetchStatistics, summarizePeriod, dailyRows, localDate } from './data.mjs';
+import { ENERGY_KEYS, energyValue, periodWindow, fetchStatistics, summarizePeriod, dailyRows, localDate } from './data.mjs?v=0.1.2';
 
 const M = globalThis.PacModel;
 const esc = value => String(value).replace(/[&<>"']/g, c => ({

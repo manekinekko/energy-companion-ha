@@ -115,8 +115,11 @@ export async function fetchStatistics(hass, sources, window) {
   const ids = [...new Set(ENERGY_KEYS.map(k => sources[k]).filter(id => id && hass.states[id]))];
   if (!ids.length) throw new Error('Aucune source énergétique accessible.');
   const metadata = await hass.callWS({ type: 'recorder/get_statistics_metadata', statistic_ids: ids });
-  const valid = metadata.filter(m => ids.includes(m.statistic_id) && m.has_sum &&
-    Object.hasOwn(UNITS, m.unit_of_measurement)).map(m => m.statistic_id);
+  const valid = metadata.filter(m => {
+    const unit = Object.hasOwn(m, 'statistics_unit_of_measurement')
+      ? m.statistics_unit_of_measurement : m.unit_of_measurement;
+    return ids.includes(m.statistic_id) && m.has_sum && Object.hasOwn(UNITS, unit);
+  }).map(m => m.statistic_id);
   if (!valid.length) throw new Error('Statistiques cumulées indisponibles. Vérifier Recorder et les unités.');
   return hass.callWS({
     type: 'recorder/statistics_during_period',

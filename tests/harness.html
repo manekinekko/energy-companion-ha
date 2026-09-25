@@ -46,7 +46,7 @@ window.hass = {
     window.requests.push(message);
     if (window.rejectStatistics) throw new Error('Recorder non disponible (test)');
     if (message.type === 'recorder/get_statistics_metadata')
-      return message.statistic_ids.map(id => ({ statistic_id: id, has_sum: true, unit_of_measurement: 'kWh' }));
+      return message.statistic_ids.map(id => ({ statistic_id: id, has_sum: true, statistics_unit_of_measurement: 'kWh', display_unit_of_measurement: 'kWh', unit_class: 'energy' }));
     if (message.type !== 'recorder/statistics_during_period') throw new Error('Unexpected WebSocket message');
     const start = Date.parse(message.start_time), end = Date.parse(message.end_time);
     return Object.fromEntries(message.statistic_ids.map(id => [

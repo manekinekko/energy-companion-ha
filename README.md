@@ -2,7 +2,7 @@
 
 A native Home Assistant integration and Lovelace card for monitoring heat-pump energy using **entities already available in HA**. The dashboard has a pastel-red light/dark theme. Its interface remains French; HA configuration forms and sensor names support English and French. All repository documentation is in English.
 
-**Version 0.1.1, entirely read-only.** No vendor account, cloud API, long-lived token, heating command, or live automation. Missing data stays unavailable. The standalone demo is separate from real measurements.
+**Version 0.1.2, entirely read-only.** No vendor account, cloud API, long-lived token, heating command, or live automation. Missing data stays unavailable. The standalone demo is separate from real measurements.
 
 Previously named PAC Energy, the project is now **Energy Assistant**. The integration domain `pac_energy`, custom card type `pac-energy-card`, resource paths, and existing entity identifiers are intentionally unchanged so installed configurations keep working. Existing installation names are user-defined and are not overwritten.
 
@@ -20,7 +20,7 @@ Validated with **Home Assistant 2026.9.2 / Python 3.14.6**, using the official c
 6. Add the following Lovelace resource as a **JavaScript module**, then reload your browser.
 
 ```yaml
-url: /pac_energy/pac-energy-card.js?v=0.1.1
+url: /pac_energy/pac-energy-card.js?v=0.1.2
 type: module
 ```
 
@@ -29,7 +29,7 @@ Resources are available under **Settings / Dashboards / menu / Resources**, with
 ```yaml
 lovelace:
   resources:
-    - url: /pac_energy/pac-energy-card.js?v=0.1.1
+    - url: /pac_energy/pac-energy-card.js?v=0.1.2
       type: module
 ```
 

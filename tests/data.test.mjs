@@ -84,3 +84,34 @@ test('Recorder requests use session, kWh conversion, one preceding boundary and 
   assert.equal(requests[1].end_time, '2026-09-01T00:00:00.000Z');
   assert.ok(requests.every(r => !r.type.includes('service')));
 });
+test('Recorder metadata accepts current statistics units and rejects missing or incompatible units', async () => {
+  const window = { previous: Date.parse('2026-08-01'), end: Date.parse('2026-09-01') };
+  for (const [metadata, accepted] of [
+    [{ statistics_unit_of_measurement: 'kWh', display_unit_of_measurement: 'MWh' }, true],
+    [{ statistics_unit_of_measurement: 'Wh' }, true],
+    [{ statistics_unit_of_measurement: 'MWh' }, true],
+    [{ unit_of_measurement: 'kWh' }, true],
+    [{ statistics_unit_of_measurement: 'W', unit_of_measurement: 'kWh' }, false],
+    [{ statistics_unit_of_measurement: null, unit_of_measurement: 'kWh' }, false],
+    [{ display_unit_of_measurement: 'kWh' }, false],
+    [{ statistics_unit_of_measurement: 'kWh', has_sum: false }, false],
+  ]) {
+    const requests = [];
+    const hass = {
+      states: { 'sensor.e': {} },
+      callWS: async message => {
+        requests.push(message);
+        return message.type.endsWith('get_statistics_metadata')
+          ? [{ statistic_id: 'sensor.e', has_sum: true, ...metadata }] : {};
+      },
+    };
+    if (accepted) {
+      await fetchStatistics(hass, { electricity: 'sensor.e' }, window);
+      assert.deepEqual(requests[1].statistic_ids, ['sensor.e']);
+      assert.deepEqual(requests[1].units, { energy: 'kWh' });
+    } else {
+      await assert.rejects(fetchStatistics(hass, { electricity: 'sensor.e' }, window), /Statistiques cumulées indisponibles/);
+      assert.equal(requests.length, 1);
+    }
+  }
+});
