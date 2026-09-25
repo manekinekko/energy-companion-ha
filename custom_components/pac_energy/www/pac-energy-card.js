@@ -1,6 +1,7 @@
 import './model.js';
 import theme from './theme.mjs';
-import { ENERGY_KEYS, energyValue, periodWindow, fetchStatistics, summarizePeriod, dailyRows, localDate } from './data.mjs?v=0.1.2';
+import { ENERGY_KEYS, energyValue, periodWindow, fetchStatistics, summarizePeriod, dailyRows, localDate } from './data.mjs?v=0.1.3';
+import { fields, liveValue, scenarioValues, curveResult, dhwEstimate, automationResult } from './live.mjs?v=0.1.3';
 
 const M = globalThis.PacModel;
 const esc = value => String(value).replace(/[&<>"']/g, c => ({
@@ -15,7 +16,10 @@ const labels = {
 const sourceLabels = {
   electricity: 'Électricité totale', thermal: 'Chaleur produite', heating: 'Chauffage (détail)',
   dhw: 'Eau chaude (détail)', backup: 'Appoint (détail)', outside: 'Extérieur',
-  room: 'Pièce', climate: 'Climat', presence: 'Présence',
+  room: 'Pièce', climate: 'Climat', presence: 'Présence sélectionnée', window: 'Fenêtre sélectionnée',
+  supply: 'Départ', return: 'Retour', dhw_current: 'Ballon ECS', cold_water: 'Eau froide',
+  room_target: 'Consigne chauffage', dhw_target: 'Consigne ECS', curve_slope: 'Pente',
+  curve_level: 'Décalage', dhw_performance: 'Performance ECS déclarée (pas un COP de période)',
 };
 const diagnostic = {
   missing: 'Entité absente', unavailable: 'Source indisponible', invalid_value: 'Valeur invalide',
@@ -52,7 +56,8 @@ export class PacEnergyCard extends HTMLElement {
     this.attachShadow({ mode: 'open' });
     this.tab = 'overview';
     this.days = 7;
-    this.scenario = M.fresh();
+    this.overrides = {};
+    this.history = [];
     this.generation = 0;
     this.shadowRoot.addEventListener('click', event => this.click(event));
     this.shadowRoot.addEventListener('change', event => this.change(event));
@@ -62,6 +67,8 @@ export class PacEnergyCard extends HTMLElement {
     if (!config || typeof config.entity !== 'string' || !config.entity.startsWith('sensor.'))
       throw new Error('Choisir l’entité État de l’intégration Energy Assistant : entity: sensor.exemple_etat');
     if (config.demo !== undefined) throw new Error('La démo est séparée. Utiliser le lien dans Home Assistant.');
+    this.overrides = {};
+    this.history = [];
     this.config = { ...config };
     this.signature = undefined;
     this.series = undefined;
@@ -76,6 +83,11 @@ export class PacEnergyCard extends HTMLElement {
     this.toggleAttribute('dark', Boolean(hass.themes?.darkMode));
     if (!this.config) return;
     const contract = this.contract;
+    if (contract && this.scenarioEntry !== contract.entry_id) {
+      this.overrides = {};
+      this.history = [];
+      this.scenarioEntry = contract.entry_id;
+    }
     const signature = JSON.stringify([
       contract, hass.config?.time_zone, hass.user?.id,
       Object.values(contract?.sources || {}).map(id => Boolean(hass.states[id])),
@@ -154,6 +166,8 @@ export class PacEnergyCard extends HTMLElement {
       <button data-action="refresh" ${this.loading ? 'disabled' : ''}>Actualiser les statistiques</button></div>
       <p class="small muted">${this.window ? `${this.window.startDate} inclus au ${this.window.endDate} exclu. Fuseau ${esc(this.window.timeZone)}. Lecture à ${esc(this.loadedAt)}.` : 'Périodes locales complètes uniquement, sans la journée en cours.'}</p>
       ${this.loading ? '<p role="status" class="notice">Chargement des statistiques HA…</p>' : ''}
+      ${this.result.detailExceedsTotal?.length ? `<p role="alert" class="notice">Détail supérieur au total sur la même période : ${this.result.detailExceedsTotal.map(key => sourceLabels[key]).join(', ')}.
+      Vérifier les périmètres et la qualité des sources. Valeurs conservées séparément, sans correction inventée.</p>` : ''}
       ${this.error ? `<p role="alert" class="notice error">Statistiques indisponibles : ${esc(this.error)}</p>` : ''}`;
   }
 
@@ -169,9 +183,9 @@ export class PacEnergyCard extends HTMLElement {
       <div class="grid twocol"><section class="card"><h2>Compteurs en direct</h2>${ENERGY_KEYS.filter(k => c.sources[k]).map(key =>
         `<div class="row"><span>${sourceLabels[key]}</span><strong>${number(energyValue(this._hass.states[c.sources[key]]))} kWh</strong></div>`).join('')}
       <p class="small muted space">Index cumulatifs, pas une consommation de période. L’appoint n’est jamais ajouté au total sélectionné.</p></section>
-      <section class="card"><h2>Confort en contexte</h2>${['outside', 'room', 'climate', 'presence'].map(key => {
+      <section class="card"><h2>Confort et réglages en direct</h2>${['outside', 'room', 'supply', 'return', 'room_target', 'curve_slope', 'curve_level', 'dhw_target', 'dhw_current', 'dhw_performance', 'climate', 'presence', 'window'].filter(key => c.sources[key]).map(key => {
         const state = this._hass.states[c.sources[key]];
-        const value = state && !c.input_errors[key] ? `${state.state} ${state.attributes.unit_of_measurement || ''}` : 'Indisponible';
+        const value = state && !c.input_errors?.[key] && !['unknown', 'unavailable'].includes(state.state) ? `${state.state} ${state.attributes.unit_of_measurement || ''}` : 'Indisponible';
         return `<div class="row"><span>${sourceLabels[key]}</span><strong>${esc(value)}</strong></div>`;
       }).join('')}<p class="small muted space">États HA sélectionnés uniquement. Aucune géolocalisation collectée.</p></section></div>`;
   }
@@ -200,61 +214,75 @@ export class PacEnergyCard extends HTMLElement {
       <tbody>${rows.map(r => `<tr><td>${r.date}</td>${ENERGY_KEYS.map(k => `<td>${number(r[k])}</td>`).join('')}</tr>`).join('')}</tbody></table></div></section>`;
   }
 
-  field(key, label, min, max, step = 1) {
-    return `<label class="field"><span>${label}</span><input id="${key}" data-scenario="${key}"
-      type="number" min="${min}" max="${max}" step="${step}" required value="${this.scenario[key]}"></label>`;
+  get scenario() { return scenarioValues(this._hass, this.contract, this.overrides); }
+
+  field(key) {
+    const { role, label, min, max, step } = fields[key];
+    const state = this._hass.states[this.contract.sources[role]];
+    const baseline = role ? liveValue(this._hass, this.contract, role) : null;
+    const edited = Object.hasOwn(this.overrides, key), value = this.scenario[key];
+    return `<label class="field"><span>${label}${edited ? ' : hypothèse locale' : ''}</span><input id="${key}" data-scenario="${key}"
+      type="number" min="${min}" max="${max}" step="${step}" value="${value === null ? '' : Number(value.toFixed(4))}"
+      placeholder="Indisponible"><small>${role
+        ? `HA : ${number(baseline)}. ${esc(state?.entity_id || this.contract.sources[role] || 'Source non configurée')}. Mise à jour : ${esc(state?.last_updated || 'indisponible')}.`
+        : 'Hypothèse à saisir explicitement, aucune valeur par défaut.'}
+      ${edited ? 'Effacer pour suivre de nouveau HA.' : ''}</small></label>`;
   }
 
   simulation() {
-    const s = this.scenario, c = this.contract.curve, d = M.dhw(s);
-    let curve = null;
-    if (c && ['standard', 'legacy-pac-0'].includes(c.profile) &&
-        Number.isFinite(c.minimum) && Number.isFinite(c.maximum))
-      curve = M.curve(0, s.slope, s.level, { variant: c.profile, minimum: c.minimum, maximum: c.maximum, room: s.curveRoom });
-    return `<h2>Tester sans toucher à la PAC.</h2><p class="notice">SCÉNARIO LOCAL NON ACTUANT. Les hypothèses ci-dessous ne sont pas des réglages lus sur la PAC. Aucun bouton ne commande un appareil.</p>
+    const s = this.scenario, c = this.contract.curve;
+    const baseline = scenarioValues(this._hass, this.contract, {});
+    const d = dhwEstimate(s, baseline.dhwTemperature), curve = curveResult(M, s, c);
+    return `<h2>Tester sans toucher à la PAC.</h2><p class="notice">SCÉNARIO LOCAL NON ACTUANT. Les champs suivent les sources HA sélectionnées jusqu’à votre modification. Les hypothèses locales restent séparées des réglages réels. Aucun bouton ne commande un appareil.</p>
+      <div class="actions"><button data-action="reset-live">Revenir aux valeurs HA</button></div>
       <div class="grid twocol"><section class="card"><h2>Courbe de chauffe</h2>
       <p>Profil configuré : ${esc(c?.profile || 'unknown')}. Bornes : ${number(c?.minimum)} / ${number(c?.maximum)} °C.</p>
-      ${this.field('slope', 'Pente du scénario', 0.2, 1.6, 0.1)}${this.field('level', 'Niveau du scénario (K)', -5, 5)}
-      ${this.field('curveRoom', 'Consigne ambiante du tracé (°C)', 16, 23, 0.5)}
-      <div class="result"><span>Tracé à 0 °C extérieur : </span><strong id="curve-result">${number(curve)} ${curve === null ? '' : '°C'}</strong></div>
+      ${['outside', 'slope', 'level', 'curveRoom'].map(key => this.field(key)).join('')}
+      <div class="result"><span>Tracé du scénario : </span><strong id="curve-result">${number(curve)} ${curve === null ? '' : '°C'}</strong></div>
+      <p>Tracé avec les entrées HA actuelles : ${number(curveResult(M, baseline, c))} °C.
+      Départ mesuré : ${number(liveValue(this._hass, this.contract, 'supply'))} °C (pas une validation du tracé).</p>
       <p class="small">Profil ou bornes inconnus : tracé indisponible. Aucun remplacement par les bornes de démo 20 à 55 °C. Formule de visualisation, pas loi de commande matérielle.</p>
       <button data-action="save-curve">Conserver le scénario de courbe</button></section>
-      <section class="card"><h2>Calculateur eau chaude</h2><p>Modèle simplifié non validé. Référence fictive 55 °C / 16,5 h par jour.</p>
-      ${this.field('dhwTemperature', 'Température simulée (°C)', 50, 60)}
-      ${this.field('dhwHours', 'Plage quotidienne (h)', 1, 24, 0.5)}
-      ${this.field('volume', 'Volume journalier supposé (L)', 50, 300, 10)}
-      ${this.field('dhwCop', 'COP constant supposé', 1, 5, 0.1)}
-      <div class="result"><span>Écart annuel au scénario initial : </span><strong>${number(d.saved)} kWh</strong></div>
+      <section class="card"><h2>Calculateur eau chaude</h2><p>Consigne HA : ${number(baseline.dhwTemperature)} °C.
+      Ballon mesuré : ${number(liveValue(this._hass, this.contract, 'dhw_current'))} °C.
+      Chauffage de l’eau uniquement, sans pertes ni programmation sanitaire.</p>
+      ${['dhwTemperature', 'coldWater', 'volume', 'dhwCop'].map(key => this.field(key)).join('')}
+      <div class="result">Chaleur théorique : ${number(d.thermal)} kWh/j. Électricité estimée : ${number(d.electricity)} kWh/j.
+      Écart estimé à la consigne HA, mêmes hypothèses : ${number(d.difference)} kWh/j.</div>
+      <p class="small">Le volume, l’eau froide et le COP doivent être connus ou saisis comme hypothèses. Un facteur de performance saisonnier n’est jamais utilisé comme COP ECS. Pas d’économies annuelles extrapolées.</p>
       <p class="notice">Ne valide ni la température sanitaire ni le cycle d’hygiène. Ne pas en déduire une consigne réelle.</p>
       <button data-action="save-dhw">Conserver le scénario ECS</button></section></div>${this.scenarioHistory()}`;
   }
 
   automation() {
-    const s = this.scenario, a = M.automation(s);
+    const s = this.scenario, a = automationResult(s);
+    const context = (key, label) => {
+      const value = liveValue(this._hass, this.contract, key);
+      const selected = Object.hasOwn(this.overrides, key) ? String(s[key]) : '';
+      return `<label class="field"><span>${label}. HA : ${value === null ? 'Indisponible' : value ? 'Oui' : 'Non'}</span>
+      <select id="${key}" data-context="${key}">${[['', 'Suivre HA'], ['true', 'Oui, hypothèse'], ['false', 'Non, hypothèse']].map(([v, text]) =>
+        `<option value="${v}" ${selected === v ? 'selected' : ''}>${text}</option>`).join('')}</select></label>`;
+    };
+    const result = { window: 'Fenêtre ouverte : pause hypothétique', present: 'Présence sélectionnée : consigne maintenue',
+      absent: 'Absence sélectionnée : abaissement hypothétique', unavailable: 'Indisponible : compléter les entrées de la règle' }[a.state];
     return `<h2>Automatismes : simulation uniquement.</h2>
-      <p class="notice">Profils et pièces fictifs. Aucune présence HA n’alimente ces règles. Pas de service, vanne, cycle sanitaire ou programme de chauffe modifié.</p>
-      <section class="card"><h2>Absence et retour</h2>${s.people.map((p, i) =>
-        `<div class="row"><span>${p.name}, profil fictif</span><button data-person="${i}" aria-pressed="${p.home}">${p.home ? 'À la maison' : 'Absent'}</button></div>`).join('')}
-      ${this.field('absenceHours', 'Absence supposée (h)', 0, 72, 0.5)}
-      <label class="field"><span>Émetteur simulé</span><select id="emitter" data-scenario="emitter">
-      <option value="floor" ${s.emitter === 'floor' ? 'selected' : ''}>Plancher chauffant</option>
-      <option value="radiator" ${s.emitter === 'radiator' ? 'selected' : ''}>Radiateurs</option></select></label>
-      <p class="result">${a.reduce ? 'Abaissement de 1 °C simulé' : 'Programme maintenu dans le scénario'}.
-      Bouclage ECS : ${a.loopOff ? 'arrêt simulé' : 'programme simulé normal'}.</p>
-      <p class="small">Seuil pédagogique : ${a.minHours} h. Ce n’est pas une recommandation universelle.</p></section>
-      <section class="card spaced"><h2>Pièces et anticipation fictives</h2>
-      <button data-action="advance">Avancer de 15 min</button>
-      ${a.rooms.map((r, i) => `<div class="row"><span>${r.name} : ${r.temperature} °C fictifs.
-      ${r.window ? 'Pause simulée pendant l’aération' : `Avance simulée : ${r.minutes} min`}</span>
-      <button data-window="${i}">${r.window ? 'Terminer l’aération' : 'Simuler une fenêtre'}</button></div>`).join('')}
-      <p class="small space">Le laboratoire séparé conserve tous les réglages avancés (horloge, consignes fictives, modulation et import/export de scénarios).</p></section>${this.scenarioHistory()}`;
+      <p class="notice">Contexte HA sélectionné, sans personnes ni pièces inventées. Une source de présence ne prouve pas l’absence de tout le foyer. Pas de service, vanne, cycle sanitaire ou programme de chauffe modifié.</p>
+      <div class="actions"><button data-action="reset-live">Revenir aux valeurs HA</button></div>
+      <section class="card"><h2>Règle locale de présence et d’aération</h2>
+      ${context('presence', 'Présence sélectionnée')}${context('window', 'Fenêtre ouverte')}
+      ${this.field('curveRoom')}${this.field('setback')}
+      <p class="result">${result}. Consigne hypothétique : ${number(a.target)} °C.</p>
+      <p>Température de pièce mesurée : ${number(liveValue(this._hass, this.contract, 'room'))} °C.
+      Anticipation de chauffe indisponible : aucun modèle thermique calibré. Aucun temps de retour inventé.</p>
+      <button data-action="save-automation">Conserver la règle simulée</button></section>
+      <p class="small space">Le laboratoire séparé conserve les expériences fictives avancées (horloge, pièces, modulation et programmation).</p>${this.scenarioHistory()}`;
   }
 
   scenarioHistory() {
     return `<section class="card spaced"><h2>Historique local de cette carte</h2>
-      <p class="small">Scénarios en mémoire jusqu’au rechargement. Export JSON disponible, aucune mesure HA incluse.</p>
+      <p class="small">Scénarios en mémoire jusqu’au rechargement. L’export contient les valeurs HA de référence et vos hypothèses, sans identifiants d’entités ni noms de personnes. Traitez ce fichier comme des données privées.</p>
       <div class="actions"><button data-action="scenario-export">Exporter les scénarios JSON</button></div>
-      ${this.scenario.history.length ? this.scenario.history.map(h => `<div class="row"><span>${esc(h.text)}</span><span>${esc(h.at)}</span></div>`).join('') : '<p>Aucun scénario conservé.</p>'}</section>`;
+      ${this.history.length ? this.history.map(h => `<div class="row"><span>${esc(h.text)}</span><span>${esc(h.at)}</span></div>`).join('') : '<p>Aucun scénario conservé.</p>'}</section>`;
   }
 
   reports() {
@@ -272,7 +300,7 @@ export class PacEnergyCard extends HTMLElement {
       ${Object.entries(c.sources).map(([key, value]) => `<div class="row"><span>${esc(sourceLabels[key] || key)}</span><code>${esc(value)}</code></div>`).join('')}
       <p class="notice">Le total électrique doit couvrir la PAC et son appoint. Les détails ne sont jamais additionnés au total.
       Aucun pilotage réel n’est disponible dans cette version.</p>
-      <p>Les statistiques restent dans Recorder. Les copies de compteurs Energy Assistant n’enregistrent pas de nouvelles statistiques longue durée. Les données réelles ne sont pas conservées dans le navigateur.</p>
+      <p>Les statistiques restent dans Recorder. Les copies de compteurs Energy Assistant n’enregistrent pas de nouvelles statistiques longue durée. Les données réelles ne sont pas persistées automatiquement dans le navigateur.</p>
       <div class="actions"><a href="/pac_energy/demo/index.html" target="_blank" rel="noopener">Ouvrir le laboratoire séparé (DONNÉES FICTIVES)</a></div>
       <a href="/pac_energy/demo/methodologie-calculs.md" download>Méthodologie des simulateurs</a>
       <p class="small space">L’interface est en français. Les formulaires et capteurs HA sont traduits en français et en anglais.</p></section>`;
@@ -295,8 +323,10 @@ export class PacEnergyCard extends HTMLElement {
   }
 
   log(text) {
-    this.scenario.history.unshift({ text, at: new Date().toLocaleTimeString('fr-FR') });
-    this.scenario.history = this.scenario.history.slice(0, 100);
+    this.history.unshift({ text, at: new Date().toISOString(),
+      baseline: scenarioValues(this._hass, this.contract, {}), overrides: { ...this.overrides },
+      values: this.scenario, curve: { ...this.contract.curve } });
+    this.history = this.history.slice(0, 100);
   }
 
   download(text, name, type) {
@@ -319,23 +349,19 @@ export class PacEnergyCard extends HTMLElement {
         this.month = date.toISOString().slice(0, 7);
       }
       if ((old === 'reports') !== (this.tab === 'reports')) this.load();
-    } else if (el.dataset.person !== undefined) {
-      const person = this.scenario.people[Number(el.dataset.person)];
-      person.home = !person.home;
-      this.log(`${person.name} : ${person.home ? 'retour simulé' : 'départ simulé'}`);
-    } else if (el.dataset.window !== undefined) {
-      const room = this.scenario.rooms[Number(el.dataset.window)];
-      room.windowUntil = room.windowUntil > this.scenario.clock ? 0 : this.scenario.clock + 30;
-      this.log(`${room.name} : événement de fenêtre simulé`);
     } else {
       const s = this.scenario;
       switch (el.dataset.action) {
         case 'refresh': this.load(); break;
         case 'save-curve': this.log(`Courbe simulée : pente ${s.slope}, niveau ${s.level}`); break;
-        case 'save-dhw': this.log(`ECS simulée : ${s.dhwTemperature} °C, ${s.dhwHours} h`); break;
-        case 'advance': s.clock += 15; this.log('Horloge fictive avancée de 15 min'); break;
+        case 'save-dhw': this.log(`ECS simulée : ${number(s.dhwTemperature)} °C`); break;
+        case 'save-automation': this.log('Règle locale simulée'); break;
+        case 'reset-live': this.overrides = {}; this.message = 'Hypothèses effacées, suivi des sources HA rétabli.'; break;
         case 'scenario-export':
-          this.download(JSON.stringify(s, null, 2), 'energy-assistant-scenario-local.json', 'application/json'); break;
+          this.download(JSON.stringify({ read_only: true, at: new Date().toISOString(),
+            baseline: scenarioValues(this._hass, this.contract, {}), overrides: this.overrides,
+            values: s, curve: this.contract.curve, history: this.history }, null, 2),
+          'energy-assistant-scenario-local.json', 'application/json'); break;
         case 'csv': {
           if (!this.series || !this.window) return;
           const rows = dailyRows(this.series, this.contract.sources, this.window);
@@ -352,14 +378,18 @@ export class PacEnergyCard extends HTMLElement {
 
   change(event) {
     const el = event.target;
-    if (!el.checkValidity() || !el.value.trim()) { el.reportValidity(); return; }
+    if (!el.checkValidity()) { el.reportValidity(); return; }
+    if (el.dataset.context) {
+      if (el.value === '') delete this.overrides[el.dataset.context];
+      else this.overrides[el.dataset.context] = el.value === 'true';
+      this.render(); return;
+    }
     if (el.id === 'days') { this.days = Number(el.value); this.load(); return; }
     if (el.id === 'month') { this.month = el.value; this.load(); return; }
     if (el.dataset.scenario) {
-      try {
-        this.scenario = M.validate({ ...this.scenario, [el.dataset.scenario]: el.type === 'number' ? Number(el.value) : el.value });
-        this.message = '';
-      } catch (error) { this.message = `Scénario refusé : ${error.message}`; }
+      if (!el.value.trim()) delete this.overrides[el.dataset.scenario];
+      else this.overrides[el.dataset.scenario] = Number(el.value);
+      this.message = '';
       this.render();
     }
   }

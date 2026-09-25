@@ -102,6 +102,8 @@ export function summarizePeriod(series, sources, window, { tariff, sameScope } =
     ? periodTotal(series[sources.electricity], window.previous, window.start) : null;
   return {
     ...values, previous,
+    detailExceedsTotal: ['heating', 'dhw', 'backup'].filter(key =>
+      electricity !== null && values[key] !== null && values[key] > electricity + 1e-8),
     // The selected total already includes its own scope. Never add the backup again.
     cost: electricity !== null && Number.isFinite(tariff) && tariff >= 0 ? electricity * tariff : null,
     cop: sameScope === true && electricity > 0 && values.thermal !== null

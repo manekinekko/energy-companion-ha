@@ -73,6 +73,12 @@ The first term uses water's heat capacity. The second is a simplified tank-loss 
 
 ## Home Assistant usage
 
+Unlike the standalone prototype, the live card initializes curve and DHW target inputs from explicitly selected HA sources. Empty inputs stay unavailable, and user changes are separately identified as local assumptions. No demo people, rooms, temperatures, schedules or water volumes seed the live card.
+
+The live DHW model is limited to sensible heat: `Q = V × 0.001163 × (T - Tin)` kWh per assumed day. Estimated electricity requires an explicitly supplied constant COP and is `Q / COP`. Its signed comparison replaces only the target with the current HA setpoint while keeping all other assumptions equal. It excludes standby losses, schedules, annualization and certified savings. Reported seasonal performance factors are display-only, never implicit model COPs.
+
+The live presence/window rule reads selected HA boolean context or explicit hypothetical overrides. Missing context stays unknown. It does not establish household-wide absence, predict return times or control equipment. Scenario exports contain private baseline values and assumptions, but omit entity IDs, names and coordinates.
+
 The native integration connects explicitly selected existing entities and statistics in read-only mode. Users must check source quality, confirm matching thermal/electrical scope, identify the chart profile, and configure actual bounds. See the repository's [data contract](https://github.com/manekinekko/energy-companion-ha/blob/main/docs/data-contract.md) for strict statistics-window handling.
 
 There is no equipment-control implementation. Any future automation must run on the HA side, not depend on an open browser tab, and preserve sanitary, frost, hydraulic, and anti-cycling protections. Neither the demo nor the integration sends commands.

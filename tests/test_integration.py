@@ -142,12 +142,15 @@ class RuntimeTests(unittest.IsolatedAsyncioTestCase):
         form = await self.hass.config_entries.options.async_init(entry.entry_id)
         self.assertEqual(form["type"], "form")
         changed = {k: v for k, v in CONFIG.items() if k not in ("thermal", "minimum", "maximum")}
+        self.hass.states.async_set("number.example_slope", "0.6")
+        changed["curve_slope"] = "number.example_slope"
         result = await self.hass.config_entries.options.async_configure(form["flow_id"], changed)
         self.assertEqual(result["type"], "create_entry")
         await self.hass.async_block_till_done()
         status = self.sensor(entry, "status")
         self.assertNotIn("thermal", status.attributes["sources"])
         self.assertIsNone(status.attributes["curve"]["minimum"])
+        self.assertEqual(status.attributes["sources"]["curve_slope"], "number.example_slope")
         flow = await self.hass.config_entries.flow.async_init(
             "pac_energy", context={"source": "reconfigure", "entry_id": entry.entry_id}
         )
@@ -160,6 +163,42 @@ class RuntimeTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(entry.title, "Reconfigured")
         self.assertEqual(dict(entry.options), {})
         self.assertIn("thermal", self.sensor(entry, "status").attributes["sources"])
+        self.assertNotIn("curve_slope", self.sensor(entry, "status").attributes["sources"])
+
+    async def test_live_setting_sources_validation_and_subscriptions(self):
+        self.hass.states.async_set("number.example_slope", "0.6")
+        self.hass.states.async_set("number.example_offset", "9", {"unit_of_measurement": "°F"})
+        self.hass.states.async_set("number.example_target", "71.6", {"unit_of_measurement": "°F"})
+        self.hass.states.async_set("sensor.example_tank", "46", {
+            "device_class": "temperature", "unit_of_measurement": "°C",
+        })
+        self.hass.states.async_set("binary_sensor.example_window", "off", {"device_class": "window"})
+        config = {**CONFIG, "curve_slope": "number.example_slope",
+                  "curve_level": "number.example_offset", "room_target": "number.example_target",
+                  "dhw_current": "sensor.example_tank", "window": "binary_sensor.example_window"}
+        entry = await self.create_entry(config)
+        self.assertEqual(self.sensor(entry, "status").state, "ready")
+        self.assertEqual(self.sensor(entry, "dhw_current").state, "46.0")
+        self.assertEqual(normalized(self.hass.states.get("number.example_offset"), "curve_level"), 5)
+        self.assertAlmostEqual(normalized(self.hass.states.get("number.example_target"), "room_target"), 22)
+        for value, attrs, error in [
+            ("nan", {}, "invalid_value"), ("5", {}, "invalid_value"),
+            ("0.6", {"unit_of_measurement": "kWh"}, "invalid_unit"),
+            ("unavailable", {}, "unavailable"),
+        ]:
+            self.hass.states.async_set("number.example_slope", value, attrs)
+            await self.hass.async_block_till_done()
+            self.assertEqual(self.sensor(entry, "status").attributes["input_errors"]["curve_slope"], error)
+        self.hass.states.async_set("number.example_slope", "0.7")
+        await self.hass.async_block_till_done()
+        self.assertEqual(self.sensor(entry, "status").state, "ready")
+        self.assertTrue(await self.hass.config_entries.async_unload(entry.entry_id))
+        self.hass.states.async_remove("number.example_slope")
+        await self.hass.async_block_till_done()
+        self.assertEqual(self.sensor(entry, "status").state, "unavailable")
+        self.assertTrue(await self.hass.config_entries.async_setup(entry.entry_id))
+        await self.hass.async_block_till_done()
+        self.assertEqual(self.sensor(entry, "status").attributes["input_errors"]["curve_slope"], "missing")
 
     async def test_flow_errors_and_unavailable_source(self):
         for data, field, error in [
@@ -224,10 +263,10 @@ class RuntimeTests(unittest.IsolatedAsyncioTestCase):
         manifest = json.loads(
             (Path(__file__).parents[1] / "custom_components/pac_energy/manifest.json").read_text()
         )
-        self.assertEqual(manifest["version"], "0.1.2")
+        self.assertEqual(manifest["version"], "0.1.3")
         self.assertEqual(manifest["name"], "Energy Assistant")
         async with ClientSession() as client:
-            for path in ("pac-energy-card.js", "data.mjs", "theme.mjs", "demo/index.html"):
+            for path in ("pac-energy-card.js", "data.mjs", "live.mjs", "theme.mjs", "demo/index.html"):
                 async with client.get(f"http://127.0.0.1:8123/pac_energy/{path}") as response:
                     self.assertEqual(response.status, 200)
                     self.assertGreater(len(await response.read()), 100)

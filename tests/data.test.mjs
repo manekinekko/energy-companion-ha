@@ -65,6 +65,18 @@ test('daily exports preserve missing as null and DST day duration', () => {
   series['sensor.e'].splice(50, 1);
   assert.ok(dailyRows(series, { electricity: 'sensor.e' }, window).some(r => r.electricity === null));
 });
+test('an inconsistent breakdown is flagged without altering the measured total', () => {
+  const start = Date.parse('2026-09-01'), end = start + 24 * HOUR;
+  const sources = { electricity: 'sensor.e', dhw: 'sensor.d' };
+  const series = { 'sensor.e': rows(start, end), 'sensor.d': rows(start, end, 2) };
+  const window = { start, end, previous: start - 24 * HOUR };
+  const result = summarizePeriod(series, sources, window);
+  assert.deepEqual(result.detailExceedsTotal, ['dhw']);
+  assert.equal(result.electricity, 24);
+  assert.equal(result.dhw, 48);
+  series['sensor.d'].pop();
+  assert.deepEqual(summarizePeriod(series, sources, window).detailExceedsTotal, []);
+});
 test('Recorder requests use session, kWh conversion, one preceding boundary and only selected accessible sources', async () => {
   const requests = [];
   const hass = {

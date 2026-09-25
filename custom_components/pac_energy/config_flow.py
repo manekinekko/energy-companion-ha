@@ -7,7 +7,7 @@ from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.helpers import selector
 
-from .const import DOMAIN, ENERGY_KEYS, TEMPERATURE_KEYS
+from .const import DOMAIN, ENERGY_KEYS, SETTING_KEYS, TEMPERATURE_KEYS
 from .validation import validate_config
 
 
@@ -23,6 +23,13 @@ def schema() -> vol.Schema:
         fields[vol.Optional(key)] = selector.EntitySelector(
             selector.EntitySelectorConfig(domain="sensor", device_class="temperature")
         )
+    for key in SETTING_KEYS:
+        fields[vol.Optional(key)] = selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=["sensor", "number", "input_number"])
+        )
+    fields[vol.Optional("window")] = selector.EntitySelector(
+        selector.EntitySelectorConfig(domain="binary_sensor", device_class=["window", "opening"])
+    )
     fields[vol.Optional("climate")] = selector.EntitySelector(
         selector.EntitySelectorConfig(domain="climate")
     )

@@ -10,7 +10,7 @@ Validated environment: the official **Home Assistant 2026.9.2** image with **Pyt
 sh scripts/test-ha.sh
 ```
 
-The six runtime cases cover entry creation, options forms, removal of optional fields, reconfiguration, Wh/kWh/MWh and Celsius/Fahrenheit/Kelvin normalization, missing/invalid/unavailable sources, event-driven updates, multiple entries, unload/reload/removal, and static resources. The Recorder test imports fictional values into a **real SQLite database** and invokes the official statistics API processing: millisecond hourly boundaries, Wh-to-kWh conversion, meter reset handling, and preservation of a gap.
+The seven runtime cases cover entry creation, options forms, removal of optional fields, reconfiguration, Wh/kWh/MWh and Celsius/Fahrenheit/Kelvin normalization, missing/invalid/unavailable sources, event-driven updates, multiple entries, unload/reload/removal, and static resources. Settings tests also cover number entities, temperature offsets versus absolute temperatures, source diagnostics and listener lifecycle. The Recorder test imports fictional values into a **real SQLite database** and invokes the official statistics API processing: millisecond hourly boundaries, Wh-to-kWh conversion, meter reset handling, and preservation of a gap.
 
 HA emits its normal "custom integration ... not tested by Home Assistant" warning. These tests are not HA certification. Internal aiohttp/Rich warnings and mDNS socket warnings in the network-isolated environment may also appear.
 
@@ -27,7 +27,7 @@ npm test
 npx playwright install firefox
 ```
 
-All 11 original mathematical model tests are retained. Additional tests cover units, HA-local period boundaries, 23-hour/25-hour days, incomplete windows, meter resets, COP, and avoiding double-counted backup energy. The earlier independent 21,504-point comparison against a JVM reference concerned the preserved chart formulas; that JVM comparison was not rerun here and does not certify a hardware controller.
+All 11 original mathematical model tests are retained. Additional tests cover units, HA-local period boundaries, 23-hour/25-hour days, incomplete windows, meter resets, COP, and avoiding double-counted backup energy. Live-scenario tests cover source-driven baselines, missing inputs, temperature conversions, persistent local overrides, explicit curve prerequisites, DHW assumptions and unknown presence/window context. The earlier independent 21,504-point comparison against a JVM reference concerned the preserved chart formulas; that JVM comparison was not rerun here and does not certify a hardware controller.
 
 For the card browser journey, start this server from the repository root:
 
@@ -58,4 +58,4 @@ The GitHub workflow runs the actual HA tests, reproducible frontend installation
 
 ## Outside the validation scope
 
-No testing on the user's live Home Assistant, no connection to a heat pump, no energy calibration, and no sanitary or hydraulic validation. HA versions older than 2026.9.2 and future versions are not guaranteed. Custom HA themes must maintain their own accessible contrast.
+Automated tests never connect to a user's installation or heat pump. An authorized installation on HA 2026.9.3 has separately exercised real source readings and Recorder responses; this is not an energy calibration or sanitary/hydraulic validation. HA versions older than 2026.9.2 and future versions are not guaranteed. Custom HA themes must maintain their own accessible contrast.

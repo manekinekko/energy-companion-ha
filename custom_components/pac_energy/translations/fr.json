@@ -20,7 +20,17 @@
           "tariff": "Tarif constant estimatif (EUR/kWh, facultatif)",
           "profile": "Profil explicite du tracé",
           "minimum": "Borne de départ minimale configurée (°C)",
-          "maximum": "Borne de départ maximale configurée (°C)"
+          "maximum": "Borne de départ maximale configurée (°C)",
+          "supply": "Température de départ mesurée",
+          "return": "Température de retour mesurée",
+          "dhw_current": "Température du ballon ECS mesurée",
+          "cold_water": "Température eau froide mesurée",
+          "room_target": "Source consigne chauffage (lecture seule)",
+          "dhw_target": "Source consigne ECS (lecture seule)",
+          "curve_slope": "Source pente de chauffe (sans unité, lecture seule)",
+          "curve_level": "Source décalage de chauffe (différence de température, lecture seule)",
+          "dhw_performance": "Facteur de performance ECS déclaré (affichage seul, pas COP de période)",
+          "window": "Source fenêtre/ouverture (lecture seule)"
         }
       },
       "reconfigure": {
@@ -41,7 +51,17 @@
           "tariff": "Tarif constant estimatif (EUR/kWh, facultatif)",
           "profile": "Profil explicite du tracé",
           "minimum": "Borne de départ minimale configurée (°C)",
-          "maximum": "Borne de départ maximale configurée (°C)"
+          "maximum": "Borne de départ maximale configurée (°C)",
+          "supply": "Température de départ mesurée",
+          "return": "Température de retour mesurée",
+          "dhw_current": "Température du ballon ECS mesurée",
+          "cold_water": "Température eau froide mesurée",
+          "room_target": "Source consigne chauffage (lecture seule)",
+          "dhw_target": "Source consigne ECS (lecture seule)",
+          "curve_slope": "Source pente de chauffe (sans unité, lecture seule)",
+          "curve_level": "Source décalage de chauffe (différence de température, lecture seule)",
+          "dhw_performance": "Facteur de performance ECS déclaré (affichage seul, pas COP de période)",
+          "window": "Source fenêtre/ouverture (lecture seule)"
         }
       }
     },
@@ -81,7 +101,17 @@
           "tariff": "Tarif constant estimatif (EUR/kWh, facultatif)",
           "profile": "Profil explicite du tracé",
           "minimum": "Borne de départ minimale configurée (°C)",
-          "maximum": "Borne de départ maximale configurée (°C)"
+          "maximum": "Borne de départ maximale configurée (°C)",
+          "supply": "Température de départ mesurée",
+          "return": "Température de retour mesurée",
+          "dhw_current": "Température du ballon ECS mesurée",
+          "cold_water": "Température eau froide mesurée",
+          "room_target": "Source consigne chauffage (lecture seule)",
+          "dhw_target": "Source consigne ECS (lecture seule)",
+          "curve_slope": "Source pente de chauffe (sans unité, lecture seule)",
+          "curve_level": "Source décalage de chauffe (différence de température, lecture seule)",
+          "dhw_performance": "Facteur de performance ECS déclaré (affichage seul, pas COP de période)",
+          "window": "Source fenêtre/ouverture (lecture seule)"
         }
       }
     },
@@ -136,6 +166,18 @@
       },
       "room": {
         "name": "Température de pièce"
+      },
+      "supply": {
+        "name": "Température de départ mesurée"
+      },
+      "return": {
+        "name": "Température de retour mesurée"
+      },
+      "dhw_current": {
+        "name": "Température du ballon ECS mesurée"
+      },
+      "cold_water": {
+        "name": "Température eau froide mesurée"
       }
     }
   }

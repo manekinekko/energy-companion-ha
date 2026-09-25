@@ -2,6 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { firefox } = require('playwright');
 const { mkdir, readFile } = require('node:fs/promises');
+const baseURL = process.env.PAC_TEST_URL || 'http://127.0.0.1:8767';
 
 test('real-mode card, unavailable paths, local scenarios, themes and multiple instances', { timeout: 120000 }, async () => {
   const browser = await firefox.launch({ headless: true });
@@ -9,8 +10,8 @@ test('real-mode card, unavailable paths, local scenarios, themes and multiple in
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     const errors = [], external = [];
     page.on('pageerror', error => errors.push(error.message));
-    page.on('request', request => { if (!request.url().startsWith('http://127.0.0.1:8767/')) external.push(request.url()); });
-    await page.goto('http://127.0.0.1:8767/?scoutTheme=light');
+    page.on('request', request => { if (!request.url().startsWith(`${baseURL}/`)) external.push(request.url()); });
+    await page.goto(`${baseURL}/?scoutTheme=light`);
     const card = page.locator('pac-energy-card');
     await card.getByText('168', { exact: false }).first().waitFor();
     assert.equal(await card.locator('h1').textContent(), 'Energy Assistant');
@@ -20,6 +21,11 @@ test('real-mode card, unavailable paths, local scenarios, themes and multiple in
     assert.equal(await card.locator('nav button').count(), 6);
     assert.equal(await page.evaluate(() => requests.length), 2);
     await card.getByRole('button', { name: 'Simulateurs', exact: true }).click();
+    assert.equal(await card.locator('#slope').inputValue(), '0.8');
+    assert.equal(await card.locator('#dhwTemperature').inputValue(), '51');
+    assert.equal(await card.locator('#volume').inputValue(), '');
+    assert.equal(await card.locator('#dhwCop').inputValue(), '');
+    assert.doesNotMatch(await card.locator('.body').textContent(), /16,5|Écart annuel|Camille|Alex/);
     assert.equal(await card.locator('#curve-result').textContent(), 'Indisponible ');
     await page.evaluate(() => {
       hass.states['sensor.example_status'].attributes.curve = { profile: 'standard', minimum: 20, maximum: 55 };
@@ -29,15 +35,30 @@ test('real-mode card, unavailable paths, local scenarios, themes and multiple in
     await card.locator('#slope').fill('1.2');
     await card.locator('#slope').dispatchEvent('change');
     assert.notEqual(await card.locator('#curve-result').textContent(), '38 °C');
+    await page.evaluate(() => { hass.states['number.example_slope'].state = '0.9'; card.hass = hass; });
+    assert.equal(await card.locator('#slope').inputValue(), '1.2');
     await card.getByRole('button', { name: 'Conserver le scénario de courbe' }).click();
     assert.match(await card.locator('.body').textContent(), /Courbe simulée : pente 1.2/);
+    const exported = page.waitForEvent('download');
+    await card.getByRole('button', { name: 'Exporter les scénarios JSON' }).click();
+    const scenario = JSON.parse(await readFile(await (await exported).path(), 'utf8'));
+    assert.equal(scenario.baseline.slope, 0.9);
+    assert.equal(scenario.overrides.slope, 1.2);
+    assert.equal(scenario.history[0].values.slope, 1.2);
+    assert.doesNotMatch(JSON.stringify(scenario), /example_|sensor\.|number\./);
+    await card.getByRole('button', { name: 'Revenir aux valeurs HA' }).click();
+    assert.equal(await card.locator('#slope').inputValue(), '0.9');
+    await page.evaluate(() => { hass.states['sensor.example_outside'].state = 'unavailable'; card.hass = hass; });
+    assert.equal(await card.locator('#outside').inputValue(), '');
+    assert.match(await card.locator('#curve-result').textContent(), /Indisponible/);
+    await page.evaluate(() => { hass.states['sensor.example_outside'].state = '0'; card.hass = hass; });
     await card.getByRole('button', { name: 'Automatismes', exact: true }).click();
-    await card.locator('[data-person="0"]').click();
-    await card.locator('#absenceHours').fill('8');
-    await card.locator('#absenceHours').dispatchEvent('change');
-    assert.match(await card.locator('.body').textContent(), /Abaissement de 1 °C simulé/);
-    await card.locator('[data-window="0"]').click();
-    assert.match(await card.locator('.body').textContent(), /Pause simulée/);
+    await card.locator('#presence').selectOption('false');
+    await card.locator('#setback').fill('1');
+    await card.locator('#setback').dispatchEvent('change');
+    assert.match(await card.locator('.result').textContent(), /abaissement hypothétique.*19 °C/);
+    await card.locator('#window').selectOption('true');
+    assert.match(await card.locator('.result').textContent(), /pause hypothétique/);
     await card.getByRole('button', { name: 'Rapports mensuels' }).click();
     await card.getByRole('button', { name: 'Exporter CSV réel' }).waitFor();
     const download = page.waitForEvent('download');

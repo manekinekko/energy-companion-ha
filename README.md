@@ -2,7 +2,7 @@
 
 A native Home Assistant integration and Lovelace card for monitoring heat-pump energy using **entities already available in HA**. The dashboard has a pastel-red light/dark theme. Its interface remains French; HA configuration forms and sensor names support English and French. All repository documentation is in English.
 
-**Version 0.1.2, entirely read-only.** No vendor account, cloud API, long-lived token, heating command, or live automation. Missing data stays unavailable. The standalone demo is separate from real measurements.
+**Version 0.1.3, entirely read-only.** No vendor account, cloud API, long-lived token, heating command, or live automation. Missing data stays unavailable. The standalone demo is separate from real measurements.
 
 Previously named PAC Energy, the project is now **Energy Assistant**. The integration domain `pac_energy`, custom card type `pac-energy-card`, resource paths, and existing entity identifiers are intentionally unchanged so installed configurations keep working. Existing installation names are user-defined and are not overwritten.
 
@@ -20,7 +20,7 @@ Validated with **Home Assistant 2026.9.2 / Python 3.14.6**, using the official c
 6. Add the following Lovelace resource as a **JavaScript module**, then reload your browser.
 
 ```yaml
-url: /pac_energy/pac-energy-card.js?v=0.1.2
+url: /pac_energy/pac-energy-card.js?v=0.1.3
 type: module
 ```
 
@@ -29,7 +29,7 @@ Resources are available under **Settings / Dashboards / menu / Resources**, with
 ```yaml
 lovelace:
   resources:
-    - url: /pac_energy/pac-energy-card.js?v=0.1.2
+    - url: /pac_energy/pac-energy-card.js?v=0.1.3
       type: module
 ```
 
@@ -52,12 +52,22 @@ In HACS, add `https://github.com/manekinekko/energy-companion-ha` as a **custom 
 | --- | --- | --- |
 | Overview | Live counters, period energy, constant-tariff estimate, conditional COP | Entirely fictional data |
 | Analyses | Recorder statistics, raw comparison, daily table, CSV | Synthetic history and fictional forecast |
-| Simulators | Explicitly configured curve profile/bounds, simplified DHW, exportable local scenario log | All controls, JSON import/export, local persistence |
-| Automations | **Simulated** absence, return, open windows, and preheating | Full laboratory with fictional rooms, clock, and modulation |
+| Simulators | Live settings as baseline, explicit local overrides, configured curve profile/bounds, limited DHW heat calculation | All controls, JSON import/export, local persistence |
+| Automations | Selected HA presence/window context, **non-actuating** what-if rule; no invented rooms or return times | Full laboratory with fictional rooms, clock, and modulation |
 | Monthly reports | Completed-month summary, conditional COP/cost, real CSV | Fictional printable report, PDF through browser printing |
 | Home Assistant | Sources, errors, configuration guidance, explicit demo access | Demo help and settings |
 
 Costs are **not historical electricity bills**. Comparisons are not weather-normalized. Attributable savings, real forecasts, dynamic tariffs, and automation execution remain unavailable. Scenarios never modify heating, DHW, presence, or valve entities.
+
+### Use actual settings in simulations
+
+In **Configure**, optionally select heating-curve slope, offset, heating setpoint and DHW setpoint from existing `number`, `input_number`, or `sensor` entities. These entities are only read, never changed. Select measured outdoor, room, supply/return, tank and cold-water temperatures separately. A circuit temperature is not a room-air measurement. Parameter slider limits are not actual supply-temperature curve bounds.
+
+Simulation fields follow HA until edited. Edited fields become explicit local assumptions and survive subsequent HA updates. Clear a field or choose **Revenir aux valeurs HA** to resume live tracking. Missing values remain empty, with their source and last-update timestamp shown. Values outside the chart's documented mathematical range cannot produce a result.
+
+DHW calculations require an explicit daily water volume, cold-water temperature and assumed constant COP. They estimate only sensible heat and optional electrical input, without tank losses or heating schedules. The comparison uses the current HA DHW setpoint with the same assumptions, not a fictional reference or annual savings. An optional reported DHW performance factor is display-only; seasonal performance is never substituted for period COP or the DHW assumption.
+
+Presence and window simulations concern only explicitly selected entities. A single person's absence or an occupancy sensor reporting no motion does not prove the whole household is away. Missing context stays unknown. Return-time prediction and preheating remain unavailable without a calibrated model; the separate demo retains its fictional experiments.
 
 ## History and data quality
 
@@ -87,7 +97,7 @@ To update, replace the complete integration directory, restart HA, and refresh t
 
 To remove, delete the cards, remove the integration entries under Devices & services, remove the Lovelace resource, then delete only `<HA config>/custom_components/pac_energy` and restart HA. This does not delete source entities or their statistics. The demo stores only fictional scenarios in browser storage; reset these through the demo UI if desired.
 
-Static files are public, like normal Lovelace resources, and contain no HA configuration. Real measurements are exported only through an explicit CSV action. Card scenarios remain in memory per card until reload.
+Static files are public, like normal Lovelace resources, and contain no HA configuration. Real measurements are exported only through explicit CSV or scenario JSON actions. Scenario JSON includes numerical HA baselines, selected boolean context, local overrides and capture timestamps, but not entity IDs, personal names or location coordinates. Treat exports as private installation data. Card scenarios remain in memory per card until reload.
 
 ## Development and status
 

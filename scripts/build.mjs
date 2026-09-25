@@ -23,6 +23,13 @@ const labels = {
     presence: 'Presence entity (read-only)', same_scope: 'I confirm thermal and electrical counters cover the same equipment, including backup',
     tariff: 'Constant tariff estimate (EUR/kWh, optional)', profile: 'Explicit chart profile',
     minimum: 'Configured minimum supply temperature (°C)', maximum: 'Configured maximum supply temperature (°C)',
+    supply: 'Measured supply temperature', return: 'Measured return temperature',
+    dhw_current: 'Measured DHW tank temperature', cold_water: 'Measured cold-water temperature',
+    room_target: 'Heating setpoint source (read-only)', dhw_target: 'DHW setpoint source (read-only)',
+    curve_slope: 'Heating-curve slope source (dimensionless, read-only)',
+    curve_level: 'Heating-curve offset source (temperature difference, read-only)',
+    dhw_performance: 'Reported DHW performance factor (display only, not period COP)',
+    window: 'Window/opening source (read-only)',
   },
   fr: {
     name: "Nom de l'installation", electricity: 'Énergie électrique totale (appoint inclus)',
@@ -32,10 +39,17 @@ const labels = {
     presence: 'Entité de présence (lecture seule)', same_scope: 'Je confirme que chaleur et électricité couvrent les mêmes équipements, appoint inclus',
     tariff: 'Tarif constant estimatif (EUR/kWh, facultatif)', profile: 'Profil explicite du tracé',
     minimum: 'Borne de départ minimale configurée (°C)', maximum: 'Borne de départ maximale configurée (°C)',
+    supply: 'Température de départ mesurée', return: 'Température de retour mesurée',
+    dhw_current: 'Température du ballon ECS mesurée', cold_water: 'Température eau froide mesurée',
+    room_target: 'Source consigne chauffage (lecture seule)', dhw_target: 'Source consigne ECS (lecture seule)',
+    curve_slope: 'Source pente de chauffe (sans unité, lecture seule)',
+    curve_level: 'Source décalage de chauffe (différence de température, lecture seule)',
+    dhw_performance: 'Facteur de performance ECS déclaré (affichage seul, pas COP de période)',
+    window: 'Source fenêtre/ouverture (lecture seule)',
   },
 };
 const errors = {
-  en: { invalid_config: 'Invalid configuration value.', missing: 'Entity not found.', invalid_value: 'Expected a finite non-negative energy value.',
+  en: { invalid_config: 'Invalid configuration value.', missing: 'Entity not found.', invalid_value: 'Expected a finite value in the supported range; energy must be non-negative.',
     invalid_domain: 'Unsupported entity domain.', invalid_device_class: 'Wrong device class.',
     invalid_state_class: 'Energy needs total or total_increasing state class.',
     invalid_unit: 'Use Wh/kWh/MWh or °C/°F/K.', duplicate_source: 'Select a different source for each role.',
@@ -61,7 +75,7 @@ for (const language of ['en', 'fr']) {
     selector: { profile: { options: { unknown: fr ? 'Inconnu (indisponible)' : 'Unknown (unavailable)',
       standard: 'Standard', 'legacy-pac-0': fr ? 'PAC ancienne génération, circuit 0' : 'Legacy heat pump, circuit 0' } } },
     entity: { sensor: Object.fromEntries(
-      ['status', 'electricity', 'thermal', 'heating', 'dhw', 'backup', 'outside', 'room'].map(key => [
+      ['status', 'electricity', 'thermal', 'heating', 'dhw', 'backup', 'outside', 'room', 'supply', 'return', 'dhw_current', 'cold_water'].map(key => [
         key, key === 'status' ? { name: fr ? 'État' : 'Status',
           state: { ready: fr ? 'Prêt' : 'Ready', source_error: fr ? 'Vérifier les sources' : 'Check sources' } }
           : { name: labels[language][key] },

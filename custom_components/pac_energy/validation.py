@@ -5,7 +5,10 @@ import math
 from homeassistant.core import HomeAssistant, State, valid_entity_id
 from homeassistant.util.unit_conversion import TemperatureConverter
 
-from .const import CONTEXT_KEYS, ENERGY_KEYS, ENERGY_UNITS, ENTITY_KEYS, TEMPERATURE_KEYS
+from .const import (
+    CONTEXT_KEYS, ENERGY_KEYS, ENERGY_UNITS, ENTITY_KEYS, NUMERIC_KEYS,
+    SETTING_KEYS, SETTING_TEMPERATURE_KEYS, TEMPERATURE_KEYS,
+)
 
 
 def source_error(state: State | None, key: str) -> str | None:
@@ -20,10 +23,17 @@ def source_error(state: State | None, key: str) -> str | None:
             return "invalid_domain"
         if key == "presence" and domain not in ("person", "binary_sensor"):
             return "invalid_domain"
-        if domain == "binary_sensor" and state.attributes.get("device_class") != "occupancy":
+        if key == "window":
+            if domain != "binary_sensor":
+                return "invalid_domain"
+            if state.attributes.get("device_class") not in ("window", "opening"):
+                return "invalid_device_class"
+        if key == "presence" and domain == "binary_sensor" and state.attributes.get("device_class") != "occupancy":
             return "invalid_device_class"
+        if domain == "binary_sensor" and state.state not in ("on", "off"):
+            return "invalid_value"
         return None
-    if state.domain != "sensor":
+    if state.domain not in (("sensor", "number", "input_number") if key in SETTING_KEYS else ("sensor",)):
         return "invalid_domain"
     try:
         value = float(state.state)
@@ -31,6 +41,18 @@ def source_error(state: State | None, key: str) -> str | None:
         return "invalid_value"
     if not math.isfinite(value) or (key in ENERGY_KEYS and value < 0):
         return "invalid_value"
+    if key in NUMERIC_KEYS:
+        unit = state.attributes.get("unit_of_measurement")
+        if key == "curve_level":
+            if unit not in ("°C", "°F", "K"):
+                return "invalid_unit"
+            value = value * 5 / 9 if unit == "°F" else value
+            limits = (-20, 40)
+        else:
+            if unit not in (None, "", "1"):
+                return "invalid_unit"
+            limits = (0, 4) if key == "curve_slope" else (0, 20)
+        return None if limits[0] <= value <= limits[1] else "invalid_value"
     if key in ENERGY_KEYS:
         if state.attributes.get("device_class") != "energy":
             return "invalid_device_class"
@@ -40,8 +62,8 @@ def source_error(state: State | None, key: str) -> str | None:
             return "invalid_unit"
         if not math.isfinite(value * ENERGY_UNITS[state.attributes["unit_of_measurement"]]):
             return "invalid_value"
-    if key in TEMPERATURE_KEYS:
-        if state.attributes.get("device_class") != "temperature":
+    if key in TEMPERATURE_KEYS + SETTING_TEMPERATURE_KEYS:
+        if key in TEMPERATURE_KEYS and state.attributes.get("device_class") != "temperature":
             return "invalid_device_class"
         if state.attributes.get("unit_of_measurement") not in ("°C", "°F", "K"):
             return "invalid_unit"
@@ -53,7 +75,9 @@ def normalized(state: State | None, key: str) -> float | None:
     if source_error(state, key) or state is None:
         return None
     value = float(state.state)
-    unit = state.attributes["unit_of_measurement"]
+    unit = state.attributes.get("unit_of_measurement")
+    if key in NUMERIC_KEYS:
+        return value * 5 / 9 if key == "curve_level" and unit == "°F" else value
     if key in ENERGY_KEYS:
         return value * ENERGY_UNITS[unit]
     return TemperatureConverter.convert(value, unit, "°C")
